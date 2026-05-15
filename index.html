@@ -1,0 +1,850 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Carmello — Order System</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Fraunces:ital,wght@0,300;0,500;1,300&display=swap" rel="stylesheet">
+<style>
+:root{--cream:#F5F0E8;--dark:#1A1612;--accent:#C4622D;--accent2:#8B3A1A;--muted:#7A6F68;--border:rgba(26,22,18,0.12);--success:#2D6A4F;--success-bg:#D8F3DC;--warning:#856404;--warning-bg:#FFF3CD;--danger:#842029;--danger-bg:#F8D7DA;}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--cream);color:var(--dark);font-family:'DM Mono',monospace;min-height:100vh;}
+nav{background:var(--dark);padding:0 2rem;display:flex;align-items:center;justify-content:space-between;height:56px;position:sticky;top:0;z-index:100;}
+.nav-logo{font-family:'Fraunces',serif;font-size:22px;color:var(--cream);letter-spacing:-0.5px;}
+.nav-logo span{color:var(--accent);font-style:italic;}
+.nav-right{display:flex;align-items:center;gap:12px;}
+.nav-tabs{display:flex;gap:4px;}
+.nav-tab{background:none;border:none;color:rgba(245,240,232,0.5);font-family:'DM Mono',monospace;font-size:12px;padding:6px 14px;border-radius:4px;cursor:pointer;transition:all 0.15s;letter-spacing:0.05em;}
+.nav-tab:hover{color:var(--cream);background:rgba(255,255,255,0.08);}
+.nav-tab.active{color:var(--cream);background:var(--accent);}
+.sync-pill{display:flex;align-items:center;gap:6px;font-size:10px;color:rgba(245,240,232,0.5);letter-spacing:0.04em;}
+.sync-dot{width:7px;height:7px;border-radius:50%;background:#666;transition:background 0.3s;}
+.sync-dot.ok{background:#4CAF50;}
+.sync-dot.err{background:var(--danger);}
+.sync-dot.loading{background:var(--warning);animation:pulse 1s infinite;}
+@keyframes pulse{0%,100%{opacity:1;}50%{opacity:0.3;}}
+
+.page{display:none;padding:2rem;max-width:960px;margin:0 auto;}
+.page.active{display:block;}
+.page-title{font-family:'Fraunces',serif;font-size:28px;font-weight:300;margin-bottom:4px;}
+.page-sub{font-size:11px;color:var(--muted);letter-spacing:0.05em;margin-bottom:2rem;}
+.card{background:#fff;border:1px solid var(--border);border-radius:10px;padding:1.5rem;margin-bottom:1rem;}
+.card-title{font-size:11px;letter-spacing:0.1em;color:var(--muted);margin-bottom:1rem;text-transform:uppercase;}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+.form-group{display:flex;flex-direction:column;gap:5px;}
+.form-group.full{grid-column:1/-1;}
+label{font-size:11px;letter-spacing:0.06em;color:var(--muted);text-transform:uppercase;}
+input,select{font-family:'DM Mono',monospace;font-size:13px;background:var(--cream);border:1px solid var(--border);border-radius:6px;padding:9px 12px;color:var(--dark);outline:none;transition:border 0.15s;width:100%;}
+input:focus,select:focus{border-color:var(--accent);}
+input[type=number]{-moz-appearance:textfield;}
+input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
+
+.tier-banner{background:var(--dark);border-radius:8px;padding:10px 16px;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;}
+.tier-banner-label{font-size:11px;color:rgba(245,240,232,0.6);letter-spacing:0.05em;}
+.tier-banner-val{font-family:'Fraunces',serif;font-size:18px;color:var(--cream);}
+.tier-pills{display:flex;gap:6px;}
+.tier-pill{font-size:10px;padding:3px 10px;border-radius:3px;border:1px solid rgba(255,255,255,0.15);color:rgba(245,240,232,0.4);letter-spacing:0.04em;}
+.tier-pill.active{background:var(--accent);border-color:var(--accent);color:#fff;}
+
+.flavor-section{display:flex;flex-direction:column;gap:8px;}
+.flavor-row{display:grid;grid-template-columns:150px 90px 1fr 160px;align-items:center;gap:12px;padding:10px 14px;background:var(--cream);border-radius:8px;border:1px solid transparent;transition:all 0.15s;}
+.flavor-row.over-stock{border-color:#f5c6c6;background:#fff5f5;}
+.flavor-row.low-stock{border-color:#ffe08a;background:#fffbee;}
+.flavor-label{font-size:13px;font-weight:500;}
+.flavor-price{font-size:11px;color:var(--accent);margin-top:2px;}
+.flavor-subtotal{font-size:12px;color:var(--muted);}
+.flavor-qty{text-align:center;}
+.stock-ind{font-size:10px;text-align:right;}
+.s-ok{color:var(--success);}
+.s-low{color:var(--warning);}
+.s-over{color:var(--danger);}
+
+.summary-box{background:var(--dark);border-radius:10px;padding:1.25rem 1.5rem;color:var(--cream);}
+.summary-row{display:flex;justify-content:space-between;font-size:12px;color:rgba(245,240,232,0.6);margin-bottom:6px;}
+.summary-divider{border:none;border-top:1px solid rgba(255,255,255,0.1);margin:10px 0;}
+.summary-total{display:flex;justify-content:space-between;align-items:baseline;}
+.summary-total-label{font-size:12px;color:rgba(245,240,232,0.7);}
+.summary-total-val{font-family:'Fraunces',serif;font-size:26px;font-weight:300;}
+.advance-row{display:flex;justify-content:space-between;font-size:12px;color:#E8996A;margin-top:6px;}
+
+.btn{font-family:'DM Mono',monospace;font-size:12px;letter-spacing:0.06em;padding:10px 22px;border-radius:6px;border:none;cursor:pointer;transition:all 0.15s;text-transform:uppercase;}
+.btn-primary{background:var(--accent);color:#fff;}
+.btn-primary:hover{background:var(--accent2);}
+.btn-primary:disabled{background:var(--muted);cursor:not-allowed;}
+.btn-outline{background:transparent;border:1px solid var(--border);color:var(--dark);}
+.btn-outline:hover{border-color:var(--accent);color:var(--accent);}
+.btn-danger{background:var(--danger);color:#fff;}
+.btn-success{background:var(--success);color:#fff;}
+.btn-sm{font-size:11px;padding:5px 12px;}
+.btn-row{display:flex;gap:10px;margin-top:1.5rem;justify-content:flex-end;}
+
+.status{font-size:10px;padding:3px 8px;border-radius:3px;font-weight:500;letter-spacing:0.05em;text-transform:uppercase;display:inline-block;}
+.status-pending{background:var(--warning-bg);color:var(--warning);}
+.status-confirmed{background:var(--success-bg);color:var(--success);}
+.status-fulfilled{background:#1A1612;color:#F5F0E8;}
+
+.orders-table{width:100%;border-collapse:collapse;font-size:12px;}
+.orders-table th{font-size:10px;letter-spacing:0.08em;text-transform:uppercase;color:var(--muted);padding:8px 12px;text-align:left;border-bottom:1px solid var(--border);}
+.orders-table td{padding:10px 12px;border-bottom:1px solid var(--border);vertical-align:middle;}
+.orders-table tr:last-child td{border-bottom:none;}
+.orders-table tr:hover td{background:var(--cream);}
+.order-num{font-weight:500;color:var(--accent);}
+.action-btn{background:none;border:1px solid var(--border);border-radius:4px;padding:3px 8px;font-family:'DM Mono',monospace;font-size:10px;cursor:pointer;color:var(--dark);transition:all 0.15s;margin-right:4px;}
+.action-btn:hover{border-color:var(--accent);color:var(--accent);}
+.action-btn.fulfill{border-color:var(--success);color:var(--success);}
+.action-btn.fulfill:hover{background:var(--success);color:#fff;}
+.action-btn.receipt-btn{border-color:#185FA5;color:#185FA5;}
+.action-btn.receipt-btn:hover{background:#185FA5;color:#fff;}
+.action-btn.delete-btn{border-color:var(--danger);color:var(--danger);}
+.action-btn.delete-btn:hover{background:var(--danger);color:#fff;}
+
+.stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:1.5rem;}
+.stat-card{background:#fff;border:1px solid var(--border);border-radius:10px;padding:1.1rem 1.25rem;}
+.stat-label{font-size:10px;letter-spacing:0.08em;text-transform:uppercase;color:var(--muted);margin-bottom:6px;}
+.stat-val{font-family:'Fraunces',serif;font-size:24px;font-weight:300;}
+.stat-sub{font-size:10px;color:var(--muted);margin-top:2px;}
+
+.stock-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px;margin-bottom:1.5rem;}
+.stock-card{background:#fff;border:1px solid var(--border);border-radius:10px;padding:1.25rem;}
+.stock-flavor{font-family:'Fraunces',serif;font-size:18px;font-weight:300;margin-bottom:4px;}
+.stock-remaining{font-size:28px;font-family:'Fraunces',serif;font-weight:300;margin:6px 0;}
+.stock-bar-wrap{background:var(--cream);border-radius:4px;height:6px;margin:10px 0 6px;overflow:hidden;}
+.stock-bar{height:6px;border-radius:4px;transition:width 0.4s;background:var(--accent);}
+.stock-bar.low{background:var(--warning);}
+.stock-bar.critical{background:var(--danger);}
+.stock-numbers{display:flex;justify-content:space-between;font-size:11px;color:var(--muted);}
+.stock-header-bar{background:var(--dark);border-radius:10px;padding:1.25rem 1.5rem;color:var(--cream);display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem;}
+.stock-header-label{font-size:11px;color:rgba(245,240,232,0.6);margin-bottom:4px;}
+.stock-header-val{font-family:'Fraunces',serif;font-size:26px;font-weight:300;}
+.note-box{background:var(--warning-bg);border-radius:6px;padding:10px 14px;font-size:11px;color:var(--warning);margin-bottom:1.25rem;line-height:1.7;}
+.info-box{background:#E6F1FB;border-radius:6px;padding:10px 14px;font-size:11px;color:#185FA5;margin-bottom:1rem;line-height:1.7;}
+
+.modal-overlay{position:fixed;inset:0;background:rgba(26,22,18,0.6);z-index:200;display:none;align-items:center;justify-content:center;padding:1rem;}
+.modal-overlay.show{display:flex;}
+.modal-box{background:#fff;border-radius:12px;padding:2rem;width:480px;max-width:100%;}
+.modal-title{font-family:'Fraunces',serif;font-size:20px;font-weight:300;margin-bottom:1rem;}
+.modal-detail{font-size:12px;color:var(--muted);line-height:1.9;}
+.modal-detail strong{color:var(--dark);}
+.warn-box{background:var(--danger-bg);border-radius:6px;padding:10px 14px;font-size:12px;color:var(--danger);line-height:1.8;margin-bottom:1rem;}
+.pw-error{font-size:11px;color:var(--danger);margin-top:6px;display:none;}
+.stock-edit-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:1rem;}
+
+.receipt{background:#fff;border-radius:12px;padding:2rem;width:380px;max-width:100%;}
+.receipt-logo{font-family:'Fraunces',serif;font-size:24px;color:var(--dark);margin-bottom:2px;}
+.receipt-logo span{color:var(--accent);font-style:italic;}
+.receipt-sub{font-size:10px;color:var(--muted);letter-spacing:0.08em;margin-bottom:1.25rem;}
+.receipt-divider{border:none;border-top:1px dashed var(--border);margin:12px 0;}
+.receipt-row{display:flex;justify-content:space-between;font-size:12px;margin-bottom:5px;}
+.receipt-row.bold{font-weight:500;color:var(--dark);}
+.receipt-row.muted{color:var(--muted);}
+.receipt-row.accent{color:var(--accent);}
+.receipt-total{display:flex;justify-content:space-between;align-items:baseline;margin-top:10px;}
+.receipt-total-label{font-size:12px;color:var(--muted);}
+.receipt-total-val{font-family:'Fraunces',serif;font-size:22px;font-weight:300;}
+.receipt-order-num{font-size:28px;font-family:'Fraunces',serif;font-weight:300;color:var(--accent);margin:12px 0 4px;}
+.receipt-footer{font-size:10px;color:var(--muted);text-align:center;margin-top:1rem;line-height:1.6;}
+.receipt-badge{display:inline-block;background:var(--success-bg);color:var(--success);font-size:10px;padding:3px 10px;border-radius:3px;letter-spacing:0.05em;font-weight:500;}
+
+.loading-overlay{position:fixed;inset:0;background:rgba(245,240,232,0.85);z-index:300;display:none;align-items:center;justify-content:center;flex-direction:column;gap:12px;}
+.loading-overlay.show{display:flex;}
+.loading-spinner{width:32px;height:32px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin 0.8s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+.loading-text{font-size:12px;color:var(--muted);letter-spacing:0.05em;}
+
+@media print{
+  body *{visibility:hidden;}
+  .receipt-print-area,.receipt-print-area *{visibility:visible;}
+  .receipt-print-area{position:fixed;top:0;left:0;width:100%;padding:2rem;}
+  .no-print{display:none!important;}
+}
+
+.toast{position:fixed;bottom:2rem;right:2rem;color:#fff;padding:12px 20px;border-radius:8px;font-size:12px;z-index:999;display:none;max-width:320px;}
+.toast.show{display:block;}
+.toast.success{background:var(--success);}
+.toast.error{background:var(--danger);}
+.toast.info{background:var(--dark);}
+.empty-state{text-align:center;padding:3rem;color:var(--muted);font-size:12px;}
+.refresh-btn{font-size:11px;padding:4px 12px;background:transparent;border:1px solid rgba(245,240,232,0.2);border-radius:4px;color:rgba(245,240,232,0.5);font-family:'DM Mono',monospace;cursor:pointer;transition:all 0.15s;}
+.refresh-btn:hover{border-color:rgba(245,240,232,0.5);color:var(--cream);}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-logo">Carmello <span>Dansal</span></div>
+  <div class="nav-right">
+    <div class="sync-pill"><div class="sync-dot" id="sync-dot"></div><span id="sync-text">connecting...</span></div>
+    <button class="refresh-btn" onclick="refreshAll()">↻ Sync</button>
+    <div class="nav-tabs">
+      <button class="nav-tab active" onclick="showPage('new-order',this)">New Order</button>
+      <button class="nav-tab" onclick="showPage('orders',this)">All Orders</button>
+      <button class="nav-tab" onclick="showPage('stock',this)">Stock</button>
+    </div>
+  </div>
+</nav>
+
+<div class="loading-overlay" id="loading-overlay">
+  <div class="loading-spinner"></div>
+  <div class="loading-text" id="loading-text">Syncing with Google Sheets...</div>
+</div>
+
+<!-- ══════════════ NEW ORDER ══════════════ -->
+<div class="page active" id="page-new-order">
+  <div class="page-title">New Order</div>
+  <div class="page-sub">CARMELLO ICE CREAM · VESAK DANSAL 2026</div>
+  <div class="info-box">ℹ️ Tier pricing is based on <strong>total bags across all flavours</strong>. Mix and match to reach the next tier.</div>
+
+  <div class="card">
+    <div class="card-title">Customer details</div>
+    <div class="form-grid">
+      <div class="form-group"><label>Full name *</label><input type="text" id="cust-name" placeholder="Customer name"></div>
+      <div class="form-group"><label>Phone number *</label><input type="tel" id="cust-phone" placeholder="+94 7X XXX XXXX"></div>
+      <div class="form-group full"><label>Organisation / Dansal location</label><input type="text" id="cust-org" placeholder="Temple, organisation or address"></div>
+      <div class="form-group"><label>Delivery / Pickup date</label><input type="date" id="delivery-date"></div>
+      <div class="form-group"><label>Manual bill code</label><input type="text" id="bill-code" placeholder="e.g. B-0042"></div>
+      <div class="form-group full"><label>Notes</label><input type="text" id="notes" placeholder="Special instructions"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Flavours & quantities</div>
+    <div class="tier-banner">
+      <div>
+        <div class="tier-banner-label">CURRENT TIER</div>
+        <div class="tier-banner-val" id="tier-banner-val">— add bags below</div>
+      </div>
+      <div class="tier-pills">
+        <div class="tier-pill" id="tp-0">10–24 bags</div>
+        <div class="tier-pill" id="tp-1">25–49 bags</div>
+        <div class="tier-pill" id="tp-2">50+ bags</div>
+      </div>
+    </div>
+    <div class="flavor-section">
+      <div class="flavor-row" id="frow-vanilla">
+        <div><div class="flavor-label">Vanilla</div><div class="flavor-price" id="price-vanilla">LKR —</div></div>
+        <input class="flavor-qty" type="number" min="0" value="0" id="qty-vanilla" oninput="calcOrder()">
+        <div class="flavor-subtotal" id="sub-vanilla">—</div>
+        <div class="stock-ind" id="sind-vanilla">—</div>
+      </div>
+      <div class="flavor-row" id="frow-mango">
+        <div><div class="flavor-label">Mango</div><div class="flavor-price" id="price-mango">LKR —</div></div>
+        <input class="flavor-qty" type="number" min="0" value="0" id="qty-mango" oninput="calcOrder()">
+        <div class="flavor-subtotal" id="sub-mango">—</div>
+        <div class="stock-ind" id="sind-mango">—</div>
+      </div>
+      <div class="flavor-row" id="frow-strawberry">
+        <div><div class="flavor-label">Strawberry</div><div class="flavor-price" id="price-strawberry">LKR —</div></div>
+        <input class="flavor-qty" type="number" min="0" value="0" id="qty-strawberry" oninput="calcOrder()">
+        <div class="flavor-subtotal" id="sub-strawberry">—</div>
+        <div class="stock-ind" id="sind-strawberry">—</div>
+      </div>
+      <div class="flavor-row" id="frow-chocolate">
+        <div><div class="flavor-label">Chocolate</div><div class="flavor-price" id="price-chocolate">LKR —</div></div>
+        <input class="flavor-qty" type="number" min="0" value="0" id="qty-chocolate" oninput="calcOrder()">
+        <div class="flavor-subtotal" id="sub-chocolate">—</div>
+        <div class="stock-ind" id="sind-chocolate">—</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="summary-box">
+    <div class="summary-row"><span>Total bags</span><span id="s-bags">0</span></div>
+    <div class="summary-row"><span>Tier applied</span><span id="s-tier">—</span></div>
+    <div id="s-flavor-rows"></div>
+    <hr class="summary-divider">
+    <div class="summary-total">
+      <span class="summary-total-label">Order total</span>
+      <span class="summary-total-val" id="s-total">LKR 0</span>
+    </div>
+    <div class="advance-row"><span>30% advance required</span><span id="s-advance">LKR 0</span></div>
+  </div>
+
+  <div class="card" style="margin-top:1rem;">
+    <div class="card-title">Payment received</div>
+    <div class="form-grid">
+      <div class="form-group"><label>Advance received (LKR)</label><input type="number" id="advance-paid" placeholder="0" oninput="calcOrder()"></div>
+      <div class="form-group"><label>Payment method</label>
+        <select id="pay-method"><option>Cash</option><option>Bank Transfer</option><option>Card</option></select>
+      </div>
+    </div>
+    <div id="advance-status" style="margin-top:10px;font-size:11px;"></div>
+  </div>
+
+  <div class="btn-row">
+    <button class="btn btn-outline" onclick="resetForm()">Clear</button>
+    <button class="btn btn-primary" id="save-btn" onclick="submitOrder()">Save Order →</button>
+  </div>
+</div>
+
+<!-- ══════════════ ALL ORDERS ══════════════ -->
+<div class="page" id="page-orders">
+  <div class="page-title">All Orders</div>
+  <div class="page-sub">VESAK DANSAL 2026 · CARMELLO ICE CREAM</div>
+  <div class="stats-grid">
+    <div class="stat-card"><div class="stat-label">Total orders</div><div class="stat-val" id="stat-total">—</div></div>
+    <div class="stat-card"><div class="stat-label">Bags ordered</div><div class="stat-val" id="stat-bags">—</div><div class="stat-sub" id="stat-bags-sub">loading...</div></div>
+    <div class="stat-card"><div class="stat-label">Revenue</div><div class="stat-val" id="stat-revenue">—</div></div>
+    <div class="stat-card"><div class="stat-label">Fulfilled</div><div class="stat-val" id="stat-fulfilled">—</div></div>
+  </div>
+  <div class="card" style="padding:0;overflow:hidden;">
+    <div style="padding:1rem 1.5rem;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">
+      <div class="card-title" style="margin:0;">Orders</div>
+      <button class="btn btn-outline btn-sm" onclick="loadOrders()">↻ Refresh</button>
+    </div>
+    <div id="orders-container"><div class="empty-state">Loading orders...</div></div>
+  </div>
+</div>
+
+<!-- ══════════════ STOCK ══════════════ -->
+<div class="page" id="page-stock">
+  <div class="page-title">Stock</div>
+  <div class="page-sub">CURRENT INVENTORY · VESAK DANSAL 2026</div>
+  <div class="note-box">ℹ️ Stock may increase towards end of May. Use Edit Stock to update individual flavour limits — total updates automatically.</div>
+  <div class="stock-header-bar">
+    <div><div class="stock-header-label">Total remaining</div><div class="stock-header-val" id="stk-total-rem">—</div></div>
+    <div style="text-align:right"><div class="stock-header-label">Bags committed</div><div class="stock-header-val" id="stk-total-com">—</div></div>
+  </div>
+  <div class="stock-grid" id="stock-cards"></div>
+  <div style="text-align:right"><button class="btn btn-outline" onclick="openPwModal()">Edit Stock →</button></div>
+</div>
+
+<!-- ══════════════ MODALS ══════════════ -->
+<div class="modal-overlay" id="m-detail">
+  <div class="modal-box">
+    <div class="modal-title" id="m-detail-title">Order</div>
+    <div class="modal-detail" id="m-detail-body"></div>
+    <div class="btn-row">
+      <button class="btn btn-outline btn-sm" onclick="closeM('m-detail')">Close</button>
+      <button class="btn btn-success btn-sm" id="m-receipt-btn" onclick="receiptFromModal()">Receipt</button>
+      <button class="btn btn-primary btn-sm" id="m-fulfill-btn" onclick="fulfillFromModal()">Mark Fulfilled</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="m-confirm">
+  <div class="modal-box" style="width:440px">
+    <div class="modal-title" style="color:var(--danger)">Stock Warning</div>
+    <div class="warn-box" id="m-warn-body"></div>
+    <div style="font-size:12px;color:var(--muted);line-height:1.8;margin-bottom:1rem;">Production capacity may increase towards end of May. Proceed with this order anyway?</div>
+    <div class="btn-row">
+      <button class="btn btn-outline btn-sm" onclick="closeM('m-confirm')">Cancel</button>
+      <button class="btn btn-danger btn-sm" onclick="confirmSave()">Proceed Anyway</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="m-delete">
+  <div class="modal-box" style="width:380px">
+    <div class="modal-title" style="color:var(--danger)">Delete Order?</div>
+    <div style="font-size:12px;color:var(--muted);line-height:1.8;margin-bottom:1rem;">This will permanently remove the order from Google Sheets. This cannot be undone.</div>
+    <div class="btn-row">
+      <button class="btn btn-outline btn-sm" onclick="closeM('m-delete')">Cancel</button>
+      <button class="btn btn-danger btn-sm" onclick="confirmDelete()">Delete</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="m-pw">
+  <div class="modal-box" style="width:320px">
+    <div class="modal-title">Enter Password</div>
+    <div class="form-group" style="margin-top:0.5rem">
+      <label>Password</label>
+      <input type="password" id="pw-input" placeholder="••••••••" onkeydown="if(event.key==='Enter')checkPw()">
+      <div class="pw-error" id="pw-error">Incorrect password.</div>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-outline btn-sm" onclick="closeM('m-pw')">Cancel</button>
+      <button class="btn btn-primary btn-sm" onclick="checkPw()">Unlock →</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="m-stock-edit">
+  <div class="modal-box">
+    <div class="modal-title">Edit Stock Levels</div>
+    <div style="font-size:11px;color:var(--muted);margin-bottom:0.5rem">Update individual flavour limits. Total is calculated automatically.</div>
+    <div class="stock-edit-grid">
+      <div class="form-group"><label>Vanilla</label><input type="number" id="edit-vanilla" min="0" oninput="updateStockEditTotal()"></div>
+      <div class="form-group"><label>Mango</label><input type="number" id="edit-mango" min="0" oninput="updateStockEditTotal()"></div>
+      <div class="form-group"><label>Strawberry</label><input type="number" id="edit-strawberry" min="0" oninput="updateStockEditTotal()"></div>
+      <div class="form-group"><label>Chocolate</label><input type="number" id="edit-chocolate" min="0" oninput="updateStockEditTotal()"></div>
+    </div>
+    <div style="margin-top:1rem;padding:10px 14px;background:var(--cream);border-radius:6px;font-size:12px;display:flex;justify-content:space-between;">
+      <span style="color:var(--muted)">New total capacity</span><strong id="stock-edit-total">0</strong>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-outline btn-sm" onclick="closeM('m-stock-edit')">Cancel</button>
+      <button class="btn btn-primary btn-sm" onclick="saveStock()">Save →</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="m-receipt">
+  <div class="receipt receipt-print-area" id="receipt-content">
+    <div class="receipt-logo">Carmello <span>Dansal</span></div>
+    <div class="receipt-sub">VESAK DANSAL 2026 · ICE CREAM ORDER</div>
+    <div class="receipt-order-num" id="r-ordernum">CDAN0001</div>
+    <div id="r-billcode" style="font-size:11px;color:var(--muted);margin-bottom:8px;"></div>
+    <span class="receipt-badge" id="r-status">CONFIRMED</span>
+    <div class="receipt-divider"></div>
+    <div class="receipt-row bold"><span>Customer</span><span id="r-name">—</span></div>
+    <div class="receipt-row muted"><span>Phone</span><span id="r-phone">—</span></div>
+    <div class="receipt-row muted" id="r-org-row"><span>Organisation</span><span id="r-org">—</span></div>
+    <div class="receipt-row muted" id="r-date-row"><span>Pickup / Delivery</span><span id="r-date">—</span></div>
+    <div class="receipt-divider"></div>
+    <div style="font-size:10px;letter-spacing:0.08em;color:var(--muted);margin-bottom:8px;">ORDER ITEMS</div>
+    <div id="r-items"></div>
+    <div style="font-size:10px;color:var(--muted);margin-top:4px;" id="r-tier-note"></div>
+    <div class="receipt-divider"></div>
+    <div class="receipt-total"><span class="receipt-total-label">Order total</span><span class="receipt-total-val" id="r-total">LKR 0</span></div>
+    <div class="receipt-row accent" style="margin-top:6px;"><span>30% advance required</span><span id="r-advance-req">LKR 0</span></div>
+    <div class="receipt-row bold" style="margin-top:2px;"><span>Advance paid</span><span id="r-advance-paid">LKR 0</span></div>
+    <div class="receipt-row muted"><span>Balance due on collection</span><span id="r-balance">LKR 0</span></div>
+    <div class="receipt-row muted"><span>Payment method</span><span id="r-paymethod">—</span></div>
+    <div class="receipt-divider"></div>
+    <div class="receipt-footer">Present this receipt when collecting your order.<br>Carmello Ice Cream · Vesak Dansal 2026</div>
+    <div class="receipt-divider"></div>
+    <div style="font-size:10px;letter-spacing:0.08em;color:var(--muted);margin-bottom:8px;text-align:center;">ADVANCE PAYMENT — BANK DETAILS</div>
+    <div style="background:var(--cream);border-radius:6px;padding:10px 14px;font-size:11px;line-height:2;">
+      <div style="display:flex;justify-content:space-between;"><span style="color:var(--muted)">Account name</span><span style="font-weight:500">NJC Foods Pvt Ltd</span></div>
+      <div style="display:flex;justify-content:space-between;"><span style="color:var(--muted)">Account number</span><span style="font-weight:500">140101000009129</span></div>
+      <div style="display:flex;justify-content:space-between;"><span style="color:var(--muted)">Bank</span><span style="font-weight:500">Union Bank of Colombo PLC</span></div>
+      <div style="display:flex;justify-content:space-between;"><span style="color:var(--muted)">Branch</span><span style="font-weight:500">Ja Ela</span></div>
+    </div>
+    <div class="btn-row no-print" style="margin-top:1.5rem;">
+      <button class="btn btn-outline btn-sm" onclick="closeM('m-receipt')">Close</button>
+      <button class="btn btn-primary btn-sm" onclick="window.print()">Print / Screenshot →</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ── CONFIG ────────────────────────────────────────────────────────────────────
+var WEB_APP = 'https://script.google.com/macros/s/AKfycbzTEJeav-7IHd-7Jbi6Td6A7FItWsNnZDdDyuWwt6lAk0jTkQ0RJLwjJLWnBMZQHyTn8Q/exec';
+var PW = 'carmello2026';
+var FLAVORS = ['vanilla','mango','strawberry','chocolate'];
+var BASE_PRICES = {vanilla:[1350,1300,1250],mango:[1350,1300,1250],strawberry:[1350,1300,1250],chocolate:[1450,1400,1350]};
+var DEFAULT_STOCK = {vanilla:1500,mango:200,strawberry:300,chocolate:500};
+
+// ── STATE (always refreshed from Sheets) ──────────────────────────────────────
+var orders = [];
+var stock = JSON.parse(localStorage.getItem('carm_stock') || JSON.stringify(DEFAULT_STOCK));
+var modalIdx = null;
+var pendingOrder = null;
+var deleteOrderNum = null;
+
+// ── SHEETS API ────────────────────────────────────────────────────────────────
+// Calls Netlify serverless function (/api/sheets) which proxies to Google
+// Same domain = zero CORS issues
+
+function sheetsRequest(payload, onSuccess, onError) {
+  fetch('/api/sheets', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify(payload)
+  })
+  .then(function(r){
+    if(!r.ok) throw new Error('HTTP ' + r.status);
+    return r.json();
+  })
+  .then(function(data){
+    setSyncStatus(true);
+    if(onSuccess) onSuccess(data);
+  })
+  .catch(function(err){
+    setSyncStatus(false);
+    if(onError) onError(err);
+  });
+}
+
+// ── AUTO REFRESH every 60 seconds ────────────────────────────────────────────
+setInterval(function(){ loadOrders(); }, 60000);
+
+function setSyncStatus(ok) {
+  var dot = document.getElementById('sync-dot');
+  var txt = document.getElementById('sync-text');
+  dot.className = 'sync-dot ' + (ok ? 'ok' : 'err');
+  txt.textContent = ok ? 'synced' : 'offline';
+}
+
+function setLoading(show, msg) {
+  var el = document.getElementById('loading-overlay');
+  el.className = 'loading-overlay' + (show ? ' show' : '');
+  if(msg) document.getElementById('loading-text').textContent = msg;
+}
+
+// ── LOAD ALL ORDERS FROM SHEETS ───────────────────────────────────────────────
+function loadOrders(cb) {
+  document.getElementById('sync-dot').className = 'sync-dot loading';
+  sheetsRequest({action: 'getOrders'}, function(data) {
+    if(data && data.orders) {
+      orders = data.orders;
+    }
+    if(cb) cb();
+    if(document.getElementById('page-orders').classList.contains('active')) renderOrders();
+    if(document.getElementById('page-stock').classList.contains('active')) renderStock();
+    calcOrder();
+  }, function() {
+    toast('Could not reach Google Sheets. Working offline.', 'error');
+    if(cb) cb();
+  });
+}
+
+function refreshAll() {
+  loadOrders();
+}
+
+// ── TIER LOGIC ────────────────────────────────────────────────────────────────
+function getTierIdx(total) { return total>=50?2:total>=25?1:total>=10?0:-1; }
+function getTierLabel(idx) { return idx===2?'50+ bags (bulk)':idx===1?'25–49 bags (mid)':idx===0?'10–24 bags (standard)':'Below minimum'; }
+function fmt(n) { return 'LKR '+Math.round(n).toLocaleString(); }
+
+// ── CALC ORDER ────────────────────────────────────────────────────────────────
+function calcOrder() {
+  var totalBags = 0;
+  FLAVORS.forEach(function(f){ totalBags += Math.max(0, parseInt(document.getElementById('qty-'+f).value)||0); });
+  var tierIdx = getTierIdx(totalBags);
+
+  ['tp-0','tp-1','tp-2'].forEach(function(id,i){
+    document.getElementById(id).className = 'tier-pill' + (tierIdx===i?' active':'');
+  });
+  var bv = document.getElementById('tier-banner-val');
+  if(tierIdx>=0){ bv.textContent = getTierLabel(tierIdx); }
+  else if(totalBags>0){ bv.textContent = 'Need '+(10-totalBags)+' more bag(s) for minimum'; }
+  else { bv.textContent = '— add bags below'; }
+
+  var grand=0, frows='';
+  var rem = liveRemaining();
+
+  FLAVORS.forEach(function(f){
+    var qty = Math.max(0, parseInt(document.getElementById('qty-'+f).value)||0);
+    var price = tierIdx>=0 ? BASE_PRICES[f][tierIdx] : 0;
+    var sub = qty * price;
+    grand += sub;
+
+    document.getElementById('price-'+f).textContent = tierIdx>=0 ? 'LKR '+price.toLocaleString()+' / bag' : 'LKR — (tier pending)';
+    document.getElementById('sub-'+f).textContent = qty>0&&tierIdx>=0 ? qty+' × '+price.toLocaleString()+' = '+fmt(sub) : (qty>0?qty+' bags':'—');
+
+    var r=rem[f], row=document.getElementById('frow-'+f), ind=document.getElementById('sind-'+f);
+    row.classList.remove('over-stock','low-stock');
+    if(qty===0){ ind.innerHTML='<span class="s-ok">'+r+' avail.</span>'; }
+    else if(qty>r){ ind.innerHTML='<span class="s-over">⚠ over by '+(qty-r)+'</span>'; row.classList.add('over-stock'); }
+    else if((r-qty)<=50){ ind.innerHTML='<span class="s-low">⚠ '+(r-qty)+' left</span>'; row.classList.add('low-stock'); }
+    else { ind.innerHTML='<span class="s-ok">'+(r-qty)+' left</span>'; }
+
+    if(qty>0&&tierIdx>=0) frows+='<div class="summary-row"><span>'+f[0].toUpperCase()+f.slice(1)+' ('+qty+')</span><span>'+fmt(sub)+'</span></div>';
+  });
+
+  document.getElementById('s-bags').textContent = totalBags;
+  document.getElementById('s-tier').textContent = tierIdx>=0 ? getTierLabel(tierIdx) : (totalBags>0?'Below minimum (10 bags required)':'—');
+  document.getElementById('s-flavor-rows').innerHTML = frows;
+  document.getElementById('s-total').textContent = fmt(grand);
+  document.getElementById('s-advance').textContent = fmt(grand*0.3);
+
+  var paid = parseFloat(document.getElementById('advance-paid').value)||0;
+  var req = Math.round(grand*0.3);
+  var ae = document.getElementById('advance-status');
+  if(paid>0&&grand>0){
+    ae.innerHTML = paid>=req
+      ? '<span style="color:var(--success)">✓ Advance sufficient — order will be Confirmed</span>'
+      : '<span style="color:var(--warning)">⚠ Short by '+fmt(req-paid)+' — order will be Pending</span>';
+  } else { ae.innerHTML=''; }
+}
+
+// ── SUBMIT ORDER ──────────────────────────────────────────────────────────────
+function submitOrder() {
+  var name = document.getElementById('cust-name').value.trim();
+  var phone = document.getElementById('cust-phone').value.trim();
+  if(!name||!phone){ toast('Name and phone are required','error'); return; }
+
+  var totalBags = 0;
+  FLAVORS.forEach(function(f){ totalBags += Math.max(0,parseInt(document.getElementById('qty-'+f).value)||0); });
+  if(totalBags===0){ toast('Add at least one flavour','error'); return; }
+  if(totalBags<10){ toast('Minimum order is 10 bags total','error'); return; }
+
+  var tierIdx = getTierIdx(totalBags);
+  var items={}, grand=0;
+  FLAVORS.forEach(function(f){
+    var qty = Math.max(0,parseInt(document.getElementById('qty-'+f).value)||0);
+    if(qty>0){ var p=BASE_PRICES[f][tierIdx]; items[f]={qty:qty,price:p,subtotal:qty*p}; grand+=qty*p; }
+  });
+
+  var advancePaid = parseFloat(document.getElementById('advance-paid').value)||0;
+  var advanceRequired = Math.round(grand*0.3);
+  var status = advancePaid>=advanceRequired ? 'confirmed' : 'pending';
+
+  // Fresh stock check from current orders in memory
+  var rem = liveRemaining();
+  var warns = [];
+  FLAVORS.forEach(function(f){
+    if(items[f]&&items[f].qty>rem[f])
+      warns.push('<strong>'+f[0].toUpperCase()+f.slice(1)+':</strong> ordered '+items[f].qty+', only '+Math.max(0,rem[f])+' available');
+  });
+
+  var o = {
+    orderNum: nextNum(),
+    timestamp: new Date().toISOString(),
+    name:name, phone:phone,
+    org: document.getElementById('cust-org').value.trim(),
+    deliveryDate: document.getElementById('delivery-date').value,
+    billCode: document.getElementById('bill-code').value.trim(),
+    notes: document.getElementById('notes').value.trim(),
+    items:items, totalBags:totalBags, grand:grand, tierIdx:tierIdx,
+    advanceRequired:advanceRequired, advancePaid:advancePaid,
+    payMethod: document.getElementById('pay-method').value,
+    status:status, fulfilled:false
+  };
+
+  if(warns.length){
+    pendingOrder = o;
+    document.getElementById('m-warn-body').innerHTML = warns.join('<br>');
+    document.getElementById('m-confirm').classList.add('show');
+  } else { saveOrder(o); }
+}
+
+function confirmSave(){ closeM('m-confirm'); if(pendingOrder){ saveOrder(pendingOrder); pendingOrder=null; } }
+
+function saveOrder(o) {
+  var btn = document.getElementById('save-btn');
+  btn.disabled = true; btn.textContent = 'Saving...';
+  setLoading(true, 'Saving order to Google Sheets...');
+
+  sheetsRequest({action:'saveOrder', order:o}, function(res){
+    setLoading(false);
+    btn.disabled=false; btn.textContent='Save Order →';
+    if(res && res.success){
+      orders.unshift(o);
+      toast(o.orderNum+' saved — '+o.status,'success');
+      resetForm();
+    } else {
+      toast('Save failed. Try again.','error');
+    }
+  }, function(){
+    setLoading(false);
+    btn.disabled=false; btn.textContent='Save Order →';
+    toast('Could not reach Sheets. Check connection.','error');
+  });
+}
+
+function nextNum(){
+  var max=0;
+  orders.forEach(function(o){ var n=parseInt((o.orderNum||'CDAN0').replace('CDAN','')); if(n>max)max=n; });
+  return 'CDAN'+String(max+1).padStart(4,'0');
+}
+
+// ── COMMITTED & REMAINING ─────────────────────────────────────────────────────
+function liveCommitted(){
+  var c={vanilla:0,mango:0,strawberry:0,chocolate:0};
+  orders.forEach(function(o){
+    FLAVORS.forEach(function(f){ if(o.items&&o.items[f]) c[f]+=o.items[f].qty; });
+  });
+  return c;
+}
+function liveRemaining(){ var c=liveCommitted(),r={}; FLAVORS.forEach(function(f){r[f]=stock[f]-c[f];}); return r; }
+
+// ── ORDERS PAGE ───────────────────────────────────────────────────────────────
+function renderOrders(){
+  var el = document.getElementById('orders-container');
+  if(!orders.length){ el.innerHTML='<div class="empty-state">No orders yet.</div>'; updateStats(); return; }
+  var h='<table class="orders-table"><thead><tr><th>Order</th><th>Bill</th><th>Customer</th><th>Bags / Tier</th><th>Total</th><th>Advance</th><th>Status</th><th></th></tr></thead><tbody>';
+  orders.forEach(function(o,i){
+    var s=o.fulfilled?'fulfilled':o.status;
+    h+='<tr>';
+    h+='<td class="order-num">'+o.orderNum+'</td>';
+    h+='<td style="color:var(--muted);font-size:11px">'+(o.billCode||'—')+'</td>';
+    h+='<td><div style="font-weight:500">'+o.name+'</div><div style="font-size:10px;color:var(--muted)">'+o.phone+'</div></td>';
+    h+='<td><div>'+o.totalBags+' bags</div><div style="font-size:10px;color:var(--muted)">'+getTierLabel(o.tierIdx)+'</div></td>';
+    h+='<td>'+fmt(o.grand)+'</td>';
+    h+='<td><div>'+fmt(o.advancePaid)+'</div><div style="font-size:10px;color:var(--muted)">of '+fmt(o.advanceRequired)+'</div></td>';
+    h+='<td><span class="status status-'+s+'">'+s+'</span></td>';
+    h+='<td style="white-space:nowrap">';
+    h+='<button class="action-btn" onclick="viewOrder('+i+')">View</button>';
+    h+='<button class="action-btn receipt-btn" onclick="showReceipt('+i+')">Receipt</button>';
+    if(!o.fulfilled) h+='<button class="action-btn fulfill" onclick="fulfillOrder('+i+')">Fulfill</button>';
+    h+='<button class="action-btn delete-btn" onclick="askDelete(\''+o.orderNum+'\')">Delete</button>';
+    h+='</td></tr>';
+  });
+  h+='</tbody></table>';
+  el.innerHTML=h; updateStats();
+}
+
+function updateStats(){
+  var bags=0,rev=0,ful=0,ts=0;
+  orders.forEach(function(o){bags+=o.totalBags;rev+=o.grand;if(o.fulfilled)ful++;});
+  FLAVORS.forEach(function(f){ts+=stock[f];});
+  document.getElementById('stat-total').textContent=orders.length;
+  document.getElementById('stat-bags').textContent=bags.toLocaleString();
+  document.getElementById('stat-bags-sub').textContent='of '+ts.toLocaleString()+' stock';
+  document.getElementById('stat-revenue').textContent=rev>=1000000?(rev/1000000).toFixed(1)+'M':(rev/1000).toFixed(0)+'K';
+  document.getElementById('stat-fulfilled').textContent=ful;
+}
+
+function viewOrder(i){
+  var o=orders[i]; modalIdx=i;
+  document.getElementById('m-detail-title').textContent=o.orderNum+(o.billCode?' · '+o.billCode:'');
+  var fl='';
+  FLAVORS.forEach(function(f){if(o.items&&o.items[f])fl+='<br><strong>'+f[0].toUpperCase()+f.slice(1)+':</strong> '+o.items[f].qty+' bags @ LKR '+o.items[f].price.toLocaleString()+' = '+fmt(o.items[f].subtotal);});
+  document.getElementById('m-detail-body').innerHTML=
+    '<strong>Customer:</strong> '+o.name+'<br><strong>Phone:</strong> '+o.phone+'<br>'+
+    (o.org?'<strong>Organisation:</strong> '+o.org+'<br>':'')+
+    (o.deliveryDate?'<strong>Delivery:</strong> '+o.deliveryDate+'<br>':'')+
+    '<strong>Tier:</strong> '+getTierLabel(o.tierIdx)+'<br>'+
+    '<br><strong>Order:</strong>'+fl+
+    '<br><br><strong>Total:</strong> '+fmt(o.grand)+
+    '<br><strong>Advance required:</strong> '+fmt(o.advanceRequired)+
+    '<br><strong>Advance paid:</strong> '+fmt(o.advancePaid)+' ('+o.payMethod+')'+
+    '<br><strong>Balance on collection:</strong> '+fmt(Math.max(0,o.grand-o.advancePaid))+
+    (o.notes?'<br><strong>Notes:</strong> '+o.notes:'')+
+    '<br><strong>Status:</strong> '+(o.fulfilled?'✓ Fulfilled':o.status);
+  document.getElementById('m-fulfill-btn').style.display=o.fulfilled?'none':'inline-block';
+  document.getElementById('m-detail').classList.add('show');
+}
+
+function fulfillFromModal(){ if(modalIdx!==null){ fulfillOrder(modalIdx); closeM('m-detail'); } }
+function receiptFromModal(){ if(modalIdx!==null){ showReceipt(modalIdx); closeM('m-detail'); } }
+
+function fulfillOrder(i){
+  var o=orders[i];
+  setLoading(true,'Updating order...');
+  sheetsRequest({action:'updateStatus',orderNum:o.orderNum,status:'fulfilled'}, function(){
+    setLoading(false);
+    orders[i].fulfilled=true; orders[i].status='fulfilled';
+    renderOrders(); toast(o.orderNum+' marked as fulfilled','success');
+  }, function(){
+    setLoading(false); toast('Update failed. Try again.','error');
+  });
+}
+
+// ── DELETE ────────────────────────────────────────────────────────────────────
+function askDelete(orderNum){
+  deleteOrderNum=orderNum;
+  document.getElementById('m-delete').classList.add('show');
+}
+
+function confirmDelete(){
+  closeM('m-delete');
+  setLoading(true,'Deleting order...');
+  sheetsRequest({action:'deleteOrder',orderNum:deleteOrderNum}, function(res){
+    setLoading(false);
+    if(res&&res.success){
+      orders=orders.filter(function(o){return o.orderNum!==deleteOrderNum;});
+      renderOrders(); toast('Order deleted','info');
+    } else { toast('Delete failed','error'); }
+    deleteOrderNum=null;
+  }, function(){
+    setLoading(false); toast('Delete failed. Try again.','error');
+  });
+}
+
+// ── RECEIPT ───────────────────────────────────────────────────────────────────
+function showReceipt(i){
+  var o=orders[i];
+  document.getElementById('r-ordernum').textContent=o.orderNum;
+  document.getElementById('r-billcode').textContent=o.billCode?'Manual bill: '+o.billCode:'';
+  document.getElementById('r-status').textContent=o.fulfilled?'FULFILLED':o.status.toUpperCase();
+  document.getElementById('r-name').textContent=o.name;
+  document.getElementById('r-phone').textContent=o.phone;
+  var or2=document.getElementById('r-org-row');
+  if(o.org){document.getElementById('r-org').textContent=o.org;or2.style.display='flex';}else{or2.style.display='none';}
+  var dr=document.getElementById('r-date-row');
+  if(o.deliveryDate){document.getElementById('r-date').textContent=o.deliveryDate;dr.style.display='flex';}else{dr.style.display='none';}
+  var ih='';
+  FLAVORS.forEach(function(f){if(o.items&&o.items[f])ih+='<div class="receipt-row"><span>'+f[0].toUpperCase()+f.slice(1)+' × '+o.items[f].qty+'</span><span>'+fmt(o.items[f].subtotal)+'</span></div>';});
+  document.getElementById('r-items').innerHTML=ih;
+  document.getElementById('r-tier-note').textContent='Tier: '+getTierLabel(o.tierIdx);
+  document.getElementById('r-total').textContent=fmt(o.grand);
+  document.getElementById('r-advance-req').textContent=fmt(o.advanceRequired);
+  document.getElementById('r-advance-paid').textContent=fmt(o.advancePaid);
+  document.getElementById('r-balance').textContent=fmt(Math.max(0,o.grand-o.advancePaid));
+  document.getElementById('r-paymethod').textContent=o.payMethod;
+  document.getElementById('m-receipt').classList.add('show');
+}
+
+// ── STOCK ─────────────────────────────────────────────────────────────────────
+function renderStock(){
+  var rem=liveRemaining(),com=liveCommitted();
+  var tr=0,tc=0,ts=0;
+  FLAVORS.forEach(function(f){tr+=Math.max(0,rem[f]);tc+=com[f];ts+=stock[f];});
+  document.getElementById('stk-total-rem').textContent=tr.toLocaleString()+' / '+ts.toLocaleString();
+  document.getElementById('stk-total-com').textContent=tc.toLocaleString()+' bags';
+  var h='';
+  FLAVORS.forEach(function(f){
+    var r=Math.max(0,rem[f]),t=stock[f];
+    var pct=t>0?Math.min(100,Math.round(r/t*100)):0;
+    var bc=pct<=20?'critical':pct<=40?'low':'';
+    var col=pct<=20?'var(--danger)':pct<=40?'var(--warning)':'var(--dark)';
+    h+='<div class="stock-card">';
+    h+='<div class="stock-flavor">'+f[0].toUpperCase()+f.slice(1)+'</div>';
+    h+='<div class="stock-remaining" style="color:'+col+'">'+r+' <span style="font-size:13px;color:var(--muted)">remaining</span></div>';
+    h+='<div class="stock-bar-wrap"><div class="stock-bar '+bc+'" style="width:'+pct+'%"></div></div>';
+    h+='<div class="stock-numbers"><span>'+com[f]+' committed</span><span>'+t+' total</span></div>';
+    h+='</div>';
+  });
+  document.getElementById('stock-cards').innerHTML=h;
+}
+
+function updateStockEditTotal(){
+  var t=0; FLAVORS.forEach(function(f){t+=Math.max(0,parseInt(document.getElementById('edit-'+f).value)||0);});
+  document.getElementById('stock-edit-total').textContent=t.toLocaleString()+' bags';
+}
+
+function openPwModal(){
+  document.getElementById('pw-input').value='';
+  document.getElementById('pw-error').style.display='none';
+  document.getElementById('m-pw').classList.add('show');
+  setTimeout(function(){document.getElementById('pw-input').focus();},100);
+}
+
+function checkPw(){
+  if(document.getElementById('pw-input').value===PW){
+    closeM('m-pw');
+    FLAVORS.forEach(function(f){document.getElementById('edit-'+f).value=stock[f];});
+    updateStockEditTotal();
+    document.getElementById('m-stock-edit').classList.add('show');
+  } else {
+    document.getElementById('pw-error').style.display='block';
+    document.getElementById('pw-input').value='';
+  }
+}
+
+function saveStock(){
+  FLAVORS.forEach(function(f){stock[f]=Math.max(0,parseInt(document.getElementById('edit-'+f).value)||0);});
+  localStorage.setItem('carm_stock',JSON.stringify(stock));
+  sheetsRequest({action:'saveStock',stock:stock},function(){},function(){});
+  closeM('m-stock-edit'); renderStock(); toast('Stock updated','success');
+}
+
+// ── UTILS ─────────────────────────────────────────────────────────────────────
+function resetForm(){
+  ['cust-name','cust-phone','cust-org','delivery-date','bill-code','notes','advance-paid'].forEach(function(id){document.getElementById(id).value='';});
+  FLAVORS.forEach(function(f){document.getElementById('qty-'+f).value=0;});
+  document.getElementById('pay-method').value='Cash';
+  document.getElementById('advance-status').innerHTML='';
+  calcOrder();
+}
+
+function toast(msg,type){
+  var t=document.getElementById('toast');
+  t.textContent=msg; t.className='toast show '+(type||'info');
+  setTimeout(function(){t.className='toast';},3500);
+}
+
+function closeM(id){document.getElementById(id).classList.remove('show');}
+
+function showPage(p,btn){
+  document.querySelectorAll('.page').forEach(function(e){e.classList.remove('active');});
+  document.querySelectorAll('.nav-tab').forEach(function(e){e.classList.remove('active');});
+  document.getElementById('page-'+p).classList.add('active');
+  if(btn)btn.classList.add('active');
+  if(p==='orders'){loadOrders();}
+  if(p==='stock'){renderStock(); loadOrders(function(){renderStock();});}
+}
+
+// ── INIT ──────────────────────────────────────────────────────────────────────
+calcOrder();
+loadOrders(function(){ renderStock(); });
+</script>
+</body>
+</html>
